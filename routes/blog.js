@@ -48,7 +48,58 @@ router.get('/posts/:id', async function(req, res) {
         return res.status(404).render('404');
     }
 
-    res.render('post-detail', {post: posts[0] });
+    const postData = {
+        ...posts[0],
+        date: posts[0].date.toISOString(),
+        humanReadableDate: posts[0].date.toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day:'numeric',
+        }),
+    };
+    res.render('post-detail', {post: postData });
+});
+
+router.get('/posts/:id/edit', async function(req, res) {
+    const query = `SELECT * FROM posts WHERE id = ?`;
+    const [posts] = await db.query(query, [req.params.id]);
+
+    if (!posts || posts.length === 0) {
+        return res.status(404).render('404');
+    }
+
+    // DEBUG: Look at your terminal/command prompt to see the exact keys
+    console.log(posts[0]); 
+
+    res.render('update-post', { post: posts[0] });
+});
+
+// 1. Added the leading slash /
+router.post('/posts/:id/edit', async function (req, res) {
+    const query = `
+        UPDATE posts 
+        SET title = ?, summary = ?, body = ?
+        WHERE id = ?
+    `;
+
+    
+    console.log('Form Data Received:', req.body);
+    console.log('Post ID:', req.params.id);
+
+    try {
+        await db.query(query, [
+            req.body.title,
+            req.body.summary,
+            req.body.content, 
+            req.params.id,
+        ]);
+
+        res.redirect('/posts');
+    } catch (error) {
+        console.error('Update Error:', error);
+        res.status(500).send('Failed to update post');
+    }
 });
 
 module.exports = router;
